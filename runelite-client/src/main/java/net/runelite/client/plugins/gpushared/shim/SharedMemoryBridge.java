@@ -18,6 +18,8 @@ public class SharedMemoryBridge
     public ByteBuffer mouseMoveBuffer;
     public ByteBuffer mousePressBuffer;
     public ByteBuffer mouseReleaseBuffer;
+    public ByteBuffer mouseWheelBuffer;
+    public ByteBuffer keyQueueBuffer;
 
     public native long openSharedMemory(String name);
     public native void closeSharedMemory(long handle);
@@ -27,6 +29,8 @@ public class SharedMemoryBridge
     public native ByteBuffer mapMouseMove(long handle);
     public native ByteBuffer mapMousePress(long handle);
     public native ByteBuffer mapMouseRelease(long handle);
+    public native ByteBuffer mapMouseWheel(long handle);
+    public native ByteBuffer mapKeyQueue(long handle);
 
     public void init(String shmName)
     {
@@ -40,6 +44,8 @@ public class SharedMemoryBridge
         mouseMoveBuffer    = mapMouseMove(nativeHandle).order(ByteOrder.LITTLE_ENDIAN);
         mousePressBuffer   = mapMousePress(nativeHandle).order(ByteOrder.LITTLE_ENDIAN);
         mouseReleaseBuffer = mapMouseRelease(nativeHandle).order(ByteOrder.LITTLE_ENDIAN);
+        mouseWheelBuffer   = mapMouseWheel(nativeHandle).order(ByteOrder.LITTLE_ENDIAN);
+        keyQueueBuffer     = mapKeyQueue(nativeHandle).order(ByteOrder.LITTLE_ENDIAN);
         setFrameBuffer(-1, -1, false, true, null);
         setResolution(-1, -1, true);
         setMouseMove(-1, -1, true);

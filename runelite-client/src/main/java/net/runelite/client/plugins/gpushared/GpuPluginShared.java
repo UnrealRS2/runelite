@@ -30,7 +30,9 @@ import com.google.common.primitives.Ints;
 import com.google.inject.Provides;
 
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
@@ -1623,6 +1625,73 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
             eventComponent.dispatchEvent(event);
 
             bridge.setMouseRelease(-1, true);
+        }
+
+        // Mouse wheel: UE accumulates ±1 per tick; we dispatch that many wheel clicks then zero it.
+        if (bridge.mouseWheelBuffer != null) {
+            int accum = bridge.mouseWheelBuffer.getInt(0);
+            if (accum != 0) {
+                bridge.mouseWheelBuffer.putInt(0, 0);
+                int rotation = accum > 0 ? 1 : -1;
+                int count = Math.abs(accum);
+                for (int i = 0; i < count; i++) {
+                    MouseWheelEvent whe = new MouseWheelEvent(
+                            eventComponent,
+                            MouseEvent.MOUSE_WHEEL,
+                            System.currentTimeMillis(),
+                            0,
+                            lastX, lastY,
+                            0, false,
+                            MouseWheelEvent.WHEEL_UNIT_SCROLL,
+                            3, rotation
+                    );
+                    eventComponent.dispatchEvent(whe);
+                }
+            }
+        }
+
+        // Key queue: SPSC ring — UE produces, we consume.
+        if (bridge.keyQueueBuffer != null) {
+            // Layout: writeHead(0) readHead(4) events[32](8..)
+            // Each event: id(0) keyCode(4) keyChar(8) modifiers(12) — 16 bytes
+            final int KEY_QUEUE_CAPACITY = 32;
+            final int EVENT_BYTES = 16;
+            final int EVENTS_BASE = 8;
+
+            java.lang.invoke.VarHandle.acquireFence();
+            int writeHead = bridge.keyQueueBuffer.getInt(0);
+            int readHead  = bridge.keyQueueBuffer.getInt(4);
+
+            while (readHead != writeHead) {
+                int slot = readHead & (KEY_QUEUE_CAPACITY - 1);
+                int off  = EVENTS_BASE + slot * EVENT_BYTES;
+
+                int id        = bridge.keyQueueBuffer.getInt(off);
+                int keyCode   = bridge.keyQueueBuffer.getInt(off + 4);
+                int keyChar   = bridge.keyQueueBuffer.getInt(off + 8);
+                int modifiers = bridge.keyQueueBuffer.getInt(off + 12);
+
+                char awtChar = (keyChar == 0xFFFF) ? KeyEvent.CHAR_UNDEFINED : (char) keyChar;
+
+                int awtId;
+                switch (id) {
+                    case 400: awtId = KeyEvent.KEY_TYPED;    break;
+                    case 401: awtId = KeyEvent.KEY_PRESSED;  break;
+                    case 402: awtId = KeyEvent.KEY_RELEASED; break;
+                    default:  awtId = KeyEvent.KEY_PRESSED;  break;
+                }
+
+                KeyEvent ke = new KeyEvent(
+                        eventComponent, awtId,
+                        System.currentTimeMillis(),
+                        modifiers, keyCode, awtChar
+                );
+                eventComponent.dispatchEvent(ke);
+
+                readHead++;
+                java.lang.invoke.VarHandle.releaseFence();
+                bridge.keyQueueBuffer.putInt(4, readHead);
+            }
         }
 
         // yaw: 0 = north, increasing clockwise
