@@ -68,6 +68,12 @@ public class SceneUploader
 
 	/** Object IDs whose texture animation should be suppressed (encoded as tf=1 in vertex data). */
 	public final Set<Integer> suppressAnimObjectIds = new HashSet<>();
+	/**
+	 * Texture IDs (1-based, i.e. getTexture()+1) whose animation should be suppressed on roof
+	 * tiles (rid > 0).  Non-roof tiles and objects are unaffected.  Populate from GpuPluginShared
+	 * to fix specific textures that look wrong when animating on roof geometry.
+	 */
+	public final Set<Integer> suppressRoofAnimTextureIds = new HashSet<>();
 	private boolean suppressTextureAnim = false;
 
 	public SceneUploader(RenderCallbackManager renderCallbackManager)
@@ -158,6 +164,11 @@ public class SceneUploader
 			{
 				int pos = zone.vboO.vb.position();
 				zone.levelOffsets[level] = pos;
+			}
+			if (zone.vboA != null)
+			{
+				int apos = zone.vboA.vb.position();
+				zone.alphaLevelOffsets[level] = apos;
 			}
 		}
 
@@ -516,7 +527,7 @@ public class SceneUploader
 		final int hsl3 = nwColor;
 
 		int tex = tile.getTexture() + 1;
-		int tf = 0;
+		int tf = (this.rid > 0 && suppressRoofAnimTextureIds.contains(tex)) ? 1 : 0;
 
 		vertexBuffer.put22224(lx2, ly2, lz2, hsl2);
 		vertexBuffer.put2222(tex, 256, 256, tf);
@@ -557,7 +568,6 @@ public class SceneUploader
 
 		final int faceCount = faceX.length;
 
-		int tf = 0;
 		int cnt = 0;
 		for (int i = 0; i < faceCount; ++i)
 		{
@@ -590,6 +600,7 @@ public class SceneUploader
 			int lz2 = vertexZ[vertex2] - basez;
 
 			int tex = triangleTextures != null ? triangleTextures[i] + 1 : 0;
+			int tf  = (this.rid > 0 && suppressRoofAnimTextureIds.contains(tex)) ? 1 : 0;
 			vertexBuffer.put22224(lx0, ly0, lz0, hsl0);
 			vertexBuffer.put2222(tex, (int) ((vertexX[vertex0] - lx) * 2f), (int) ((vertexZ[vertex0] - lz) * 2f), tf);
 

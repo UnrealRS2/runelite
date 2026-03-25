@@ -69,7 +69,7 @@ public class SharedMemoryBridge
         return b == 1;
     }
 
-    public void setCamera(int x, int y, int z, int yaw, int pitch, int zoom)
+    public void setCamera(int x, int y, int z, int yaw, int pitch, int zoom, int viewportW, int viewportH)
     {
         if (cameraBuf == null) return;
         cameraBuf.clear();
@@ -79,6 +79,8 @@ public class SharedMemoryBridge
         cameraBuf.putInt(yaw);
         cameraBuf.putInt(pitch);
         cameraBuf.putInt(zoom);
+        cameraBuf.putInt(viewportW);
+        cameraBuf.putInt(viewportH);
         cameraBuf.rewind();
     }
 

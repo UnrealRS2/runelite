@@ -72,7 +72,8 @@ public class Zone
 	public boolean dirty; // whether the zone has temporary modifications
 	public boolean invalidate; // whether the zone needs rebuilding
 
-	public int[] levelOffsets = new int[4]; // buffer pos in ints for the end of the level
+	public int[] levelOffsets = new int[4];       // buffer pos in ints for end of opaque plane
+	public int[] alphaLevelOffsets = new int[4];  // buffer pos in ints for end of alpha plane
 
 	public int[][] rids;
 	public int[][] roofStart;
