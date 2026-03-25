@@ -35,7 +35,7 @@ import net.runelite.client.plugins.gpu.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
 
 @Slf4j
-class Shader
+public class Shader
 {
 	@VisibleForTesting
 	final List<Unit> units = new ArrayList<>();
@@ -57,7 +57,7 @@ class Shader
 		return this;
 	}
 
-	int compile(Template template) throws ShaderException
+	public int compile(Template template) throws ShaderException
 	{
 		int program = glCreateProgram();
 		int[] shaders = new int[units.size()];

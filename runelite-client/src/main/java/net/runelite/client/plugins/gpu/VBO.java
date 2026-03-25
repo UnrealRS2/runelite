@@ -28,22 +28,22 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import static org.lwjgl.opengl.GL33C.*;
 
-class VBO
+public class VBO
 {
 	final int size;
 	private int usage;
 	int bufId;
 	private ByteBuffer buffer;
-	IntBuffer vb;
+	public IntBuffer vb;
 	int len;
-	boolean mapped;
+	public boolean mapped;
 
-	VBO(int size)
+	public VBO(int size)
 	{
 		this.size = size;
 	}
 
-	void init(int usage)
+	public void init(int usage)
 	{
 		this.usage = usage;
 		bufId = glGenBuffers();
@@ -66,7 +66,7 @@ class VBO
 		bufId = 0;
 	}
 
-	void map()
+	public void map()
 	{
 		assert !mapped;
 		glBindBuffer(GL_ARRAY_BUFFER, bufId);
@@ -81,7 +81,7 @@ class VBO
 		mapped = true;
 	}
 
-	void unmap()
+	public void unmap()
 	{
 		assert mapped;
 		len = vb.position();

@@ -28,37 +28,37 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-class GpuFloatBuffer
+public class GpuFloatBuffer
 {
 	private final FloatBuffer buffer;
 
-	GpuFloatBuffer(int size)
+	public GpuFloatBuffer(int size)
 	{
 		buffer = allocateDirect(size);
 	}
 
-	GpuFloatBuffer put(float f)
+	public GpuFloatBuffer put(float f)
 	{
 		buffer.put(f);
 		return this;
 	}
 
-	void flip()
+	public void flip()
 	{
 		buffer.flip();
 	}
 
-	void clear()
+	public void clear()
 	{
 		buffer.clear();
 	}
 
-	FloatBuffer getBuffer()
+	public FloatBuffer getBuffer()
 	{
 		return buffer;
 	}
 
-	static FloatBuffer allocateDirect(int size)
+	public static FloatBuffer allocateDirect(int size)
 	{
 		return ByteBuffer.allocateDirect(size * Float.BYTES)
 			.order(ByteOrder.nativeOrder())

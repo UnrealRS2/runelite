@@ -45,7 +45,7 @@ import net.runelite.api.WallObject;
 import net.runelite.client.callback.RenderCallbackManager;
 
 @Slf4j
-class SceneUploader
+public class SceneUploader
 {
 	private static final float[] modelLocalX;
 	private static final float[] modelLocalY;
@@ -65,7 +65,11 @@ class SceneUploader
 	private final RenderCallbackManager renderCallbackManager;
 	private int basex, basez, rid, level;
 
-	SceneUploader(RenderCallbackManager renderCallbackManager)
+	/** Object IDs whose texture animation should be suppressed (encoded as tf=1 in vertex data). */
+	public final Set<Integer> suppressAnimObjectIds = new HashSet<>();
+	private boolean suppressTextureAnim = false;
+
+	public SceneUploader(RenderCallbackManager renderCallbackManager)
 	{
 		this.renderCallbackManager = renderCallbackManager;
 		modelLocalXI = new int[FacePrioritySorter.MAX_VERTEX_COUNT];
@@ -73,7 +77,19 @@ class SceneUploader
 		modelLocalZI = new int[FacePrioritySorter.MAX_VERTEX_COUNT];
 	}
 
-	void zoneSize(Scene scene, Zone zone, int mzx, int mzz)
+	public interface ZoneUploadListener
+	{
+		void onZoneUploaded(int mzx, int mzz, Zone zone, GpuIntBuffer opaqueVb, GpuIntBuffer alphaVb);
+	}
+
+	private ZoneUploadListener zoneListener;
+
+	public void setZoneListener(ZoneUploadListener l)
+	{
+		zoneListener = l;
+	}
+
+	public void zoneSize(Scene scene, Zone zone, int mzx, int mzz)
 	{
 		Tile[][][] tiles = scene.getExtendedTiles();
 
@@ -93,7 +109,7 @@ class SceneUploader
 		}
 	}
 
-	void uploadZone(Scene scene, Zone zone, int mzx, int mzz)
+	public void uploadZone(Scene scene, Zone zone, int mzx, int mzz)
 	{
 		int[][][] roofs = scene.getRoofs();
 		Set<Integer> roofIds = new HashSet<>();
@@ -142,6 +158,11 @@ class SceneUploader
 				int pos = zone.vboO.vb.position();
 				zone.levelOffsets[level] = pos;
 			}
+		}
+
+		if (zoneListener != null)
+		{
+			zoneListener.onZoneUploaded(mzx, mzz, zone, vb, ab);
 		}
 	}
 
@@ -410,6 +431,7 @@ class SceneUploader
 
 	private void uploadZoneRenderable(Renderable r, Zone zone, int orient, int x, int y, int z, int lx, int lz, int ux, int uz, int id, GpuIntBuffer vb, GpuIntBuffer ab)
 	{
+		suppressTextureAnim = suppressAnimObjectIds.contains(id);
 		int pos = zone.vboA != null ? zone.vboA.vb.position() : 0;
 		Model model = null;
 		if (r instanceof Model)
@@ -493,24 +515,25 @@ class SceneUploader
 		final int hsl3 = nwColor;
 
 		int tex = tile.getTexture() + 1;
+		int tf = 0;
 
 		vertexBuffer.put22224(lx2, ly2, lz2, hsl2);
-		vertexBuffer.put2222(tex, 256, 256, 0);
+		vertexBuffer.put2222(tex, 256, 256, tf);
 
 		vertexBuffer.put22224(lx3, ly3, lz3, hsl3);
-		vertexBuffer.put2222(tex, 0, 256, 0);
+		vertexBuffer.put2222(tex, 0, 256, tf);
 
 		vertexBuffer.put22224(lx1, ly1, lz1, hsl1);
-		vertexBuffer.put2222(tex, 256, 0, 0);
+		vertexBuffer.put2222(tex, 256, 0, tf);
 
 		vertexBuffer.put22224(lx0, ly0, lz0, hsl0);
-		vertexBuffer.put2222(tex, 0, 0, 0);
+		vertexBuffer.put2222(tex, 0, 0, tf);
 
 		vertexBuffer.put22224(lx1, ly1, lz1, hsl1);
-		vertexBuffer.put2222(tex, 256, 0, 0);
+		vertexBuffer.put2222(tex, 256, 0, tf);
 
 		vertexBuffer.put22224(lx3, ly3, lz3, hsl3);
-		vertexBuffer.put2222(tex, 0, 256, 0);
+		vertexBuffer.put2222(tex, 0, 256, tf);
 
 		return 6;
 	}
@@ -533,6 +556,7 @@ class SceneUploader
 
 		final int faceCount = faceX.length;
 
+		int tf = 0;
 		int cnt = 0;
 		for (int i = 0; i < faceCount; ++i)
 		{
@@ -566,13 +590,13 @@ class SceneUploader
 
 			int tex = triangleTextures != null ? triangleTextures[i] + 1 : 0;
 			vertexBuffer.put22224(lx0, ly0, lz0, hsl0);
-			vertexBuffer.put2222(tex, (int) ((vertexX[vertex0] - lx) * 2f), (int) ((vertexZ[vertex0] - lz) * 2f), 0);
+			vertexBuffer.put2222(tex, (int) ((vertexX[vertex0] - lx) * 2f), (int) ((vertexZ[vertex0] - lz) * 2f), tf);
 
 			vertexBuffer.put22224(lx1, ly1, lz1, hsl1);
-			vertexBuffer.put2222(tex, (int) ((vertexX[vertex1] - lx) * 2f), (int) ((vertexZ[vertex1] - lz) * 2f), 0);
+			vertexBuffer.put2222(tex, (int) ((vertexX[vertex1] - lx) * 2f), (int) ((vertexZ[vertex1] - lz) * 2f), tf);
 
 			vertexBuffer.put22224(lx2, ly2, lz2, hsl2);
-			vertexBuffer.put2222(tex, (int) ((vertexX[vertex2] - lx) * 2f), (int) ((vertexZ[vertex2] - lz) * 2f), 0);
+			vertexBuffer.put2222(tex, (int) ((vertexX[vertex2] - lx) * 2f), (int) ((vertexZ[vertex2] - lz) * 2f), tf);
 		}
 
 		return cnt;
@@ -681,15 +705,16 @@ class SceneUploader
 			alphaBias |= bias != null ? (bias[face] & 0xff) << 16 : 0;
 			int texture = faceTextures != null ? faceTextures[face] + 1 : 0;
 			GpuIntBuffer buf = alpha ? ab : vb;
+			int tf = suppressTextureAnim ? 1 : 0;
 
 			buf.put22224(vx1, vy1, vz1, alphaBias | color1);
-			buf.put2222(texture, su0, sv0, 0);
+			buf.put2222(texture, su0, sv0, tf);
 
 			buf.put22224(vx2, vy2, vz2, alphaBias | color2);
-			buf.put2222(texture, su1, sv1, 0);
+			buf.put2222(texture, su1, sv1, tf);
 
 			buf.put22224(vx3, vy3, vz3, alphaBias | color3);
-			buf.put2222(texture, su2, sv2, 0);
+			buf.put2222(texture, su2, sv2, tf);
 
 			len += 3;
 		}
@@ -698,7 +723,7 @@ class SceneUploader
 	}
 
 	// temp draw
-	int uploadTempModel(Model model, int orientation, int x, int y, int z, IntBuffer opaqueBuffer)
+    public int uploadTempModel(Model model, int orientation, int x, int y, int z, IntBuffer opaqueBuffer)
 	{
 		final int triangleCount = model.getFaceCount();
 		final int vertexCount = model.getVerticesCount();
@@ -717,7 +742,8 @@ class SceneUploader
 
 		final short[] faceTextures = model.getFaceTextures();
 
-		final byte[] bias = model.getFaceBias();
+		final byte[] bias           = model.getFaceBias();
+		final byte[] transparencies = model.getFaceTransparencies();
 
 		final byte overrideAmount = model.getOverrideAmount();
 		final byte overrideHue = model.getOverrideHue();
@@ -809,17 +835,19 @@ class SceneUploader
 			int sv2 = (int) (v2 * 256f);
 
 			int alphaBias = 0;
+			alphaBias |= transparencies != null ? (transparencies[face] & 0xff) << 24 : 0;
 			alphaBias |= bias != null ? (bias[face] & 0xff) << 16 : 0;
 			int texture = faceTextures != null ? faceTextures[face] + 1 : 0;
 
+			int tf = suppressTextureAnim ? 1 : 0;
 			putfff4(opaqueBuffer, vx1, vy1, vz1, alphaBias | color1);
-			put2222(opaqueBuffer, texture, su0, sv0, 0);
+			put2222(opaqueBuffer, texture, su0, sv0, tf);
 
 			putfff4(opaqueBuffer, vx2, vy2, vz2, alphaBias | color2);
-			put2222(opaqueBuffer, texture, su1, sv1, 0);
+			put2222(opaqueBuffer, texture, su1, sv1, tf);
 
 			putfff4(opaqueBuffer, vx3, vy3, vz3, alphaBias | color3);
-			put2222(opaqueBuffer, texture, su2, sv2, 0);
+			put2222(opaqueBuffer, texture, su2, sv2, tf);
 
 			len += 3;
 		}

@@ -36,12 +36,12 @@ import static org.lwjgl.opengl.GL42C.glTexStorage3D;
 
 @Singleton
 @Slf4j
-class TextureManager
+public class TextureManager
 {
-	static final int TEXTURE_COUNT = 256;
+	public static final int TEXTURE_COUNT = 256;
 	private static final int TEXTURE_SIZE = 128;
 
-	int initTextureArray(TextureProvider textureProvider)
+	public int initTextureArray(TextureProvider textureProvider)
 	{
 		if (!allTexturesLoaded(textureProvider))
 		{
@@ -87,7 +87,7 @@ class TextureManager
 		return textureArrayId;
 	}
 
-	void setAnisotropicFilteringLevel(int textureArrayId, int level)
+	public void setAnisotropicFilteringLevel(int textureArrayId, int level)
 	{
 		glBindTexture(GL_TEXTURE_2D_ARRAY, textureArrayId);
 
@@ -115,7 +115,7 @@ class TextureManager
 		}
 	}
 
-	void freeTextureArray(int textureArrayId)
+	public void freeTextureArray(int textureArrayId)
 	{
 		glDeleteTextures(textureArrayId);
 	}
@@ -222,7 +222,7 @@ class TextureManager
 		return pixels;
 	}
 
-	float[] computeTextureAnimations(TextureProvider textureProvider)
+	public float[] computeTextureAnimations(TextureProvider textureProvider)
 	{
 		Texture[] textures = textureProvider.getTextures();
 

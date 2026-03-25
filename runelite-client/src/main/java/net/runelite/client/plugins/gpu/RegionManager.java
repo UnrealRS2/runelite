@@ -33,7 +33,7 @@ import net.runelite.api.Tile;
 import net.runelite.client.plugins.gpu.regions.Regions;
 
 @Singleton
-class RegionManager
+public class RegionManager
 {
 	private final GpuPluginConfig gpuConfig;
 	private final Regions regions;
@@ -56,7 +56,7 @@ class RegionManager
 	}
 
 	// remove tiles from the scene that are outside the current region
-	void prepare(Scene scene)
+    public void prepare(Scene scene)
 	{
 		if (scene.isInstance() || !gpuConfig.hideUnrelatedMaps())
 		{

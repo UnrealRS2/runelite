@@ -48,37 +48,38 @@ import static org.lwjgl.opengl.GL33C.*;
 
 @Slf4j
 @RequiredArgsConstructor
-class Zone
+public class Zone
 {
 	// Zone vertex format
 	// index 0: short vec3(x, y, z)
 	// index 1: int abhsl
 	// index 2: short vec4(id, x, y, z)
-	static final int VERT_SIZE = 20;
+	public static final int VERT_SIZE = 20;
 
-	int glVao;
+	public int glVao;
 	int bufLen;
 
-	int glVaoA;
+	public int glVaoA;
 	int bufLenA;
 
-	int sizeO, sizeA;
+	public int sizeO;
+    public int sizeA;
 	VBO vboO, vboA;
 
-	boolean initialized; // whether the zone vao and vbos are ready
-	boolean cull; // whether the zone is queued for deletion
-	boolean dirty; // whether the zone has temporary modifications
-	boolean invalidate; // whether the zone needs rebuilding
+	public boolean initialized; // whether the zone vao and vbos are ready
+	public boolean cull; // whether the zone is queued for deletion
+	public boolean dirty; // whether the zone has temporary modifications
+	public boolean invalidate; // whether the zone needs rebuilding
 
-	int[] levelOffsets = new int[4]; // buffer pos in ints for the end of the level
+	public int[] levelOffsets = new int[4]; // buffer pos in ints for the end of the level
 
-	int[][] rids;
-	int[][] roofStart;
-	int[][] roofEnd;
+	public int[][] rids;
+	public int[][] roofStart;
+	public int[][] roofEnd;
 
 	final List<AlphaModel> alphaModels = new ArrayList<>(0);
 
-	void init(VBO o, VBO a)
+	public void init(VBO o, VBO a)
 	{
 		assert glVao == 0;
 		assert glVaoA == 0;
@@ -98,7 +99,7 @@ class Zone
 		}
 	}
 
-	void free()
+	public void free()
 	{
 		if (vboO != null)
 		{
@@ -129,7 +130,7 @@ class Zone
 		alphaModels.clear();
 	}
 
-	void unmap()
+	public void unmap()
 	{
 		if (vboO != null)
 		{
@@ -169,7 +170,7 @@ class Zone
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	void updateRoofs(Map<Integer, Integer> updates)
+	public void updateRoofs(Map<Integer, Integer> updates)
 	{
 		for (int level = 0; level < 4; ++level)
 		{
@@ -214,7 +215,7 @@ class Zone
 		}
 	}
 
-	void renderOpaque(int zx, int zz, int minLevel, int currentLevel, int maxLevel, Set<Integer> hiddenRoofIds)
+	public void renderOpaque(int zx, int zz, int minLevel, int currentLevel, int maxLevel, Set<Integer> hiddenRoofIds)
 	{
 		drawOff.clear();
 		drawEnd.clear();
@@ -429,7 +430,7 @@ class Zone
 		alphaModels.add(m);
 	}
 
-	void addTempAlphaModel(int vao, int startpos, int endpos, int level, int x, int y, int z)
+	public void addTempAlphaModel(int vao, int startpos, int endpos, int level, int x, int y, int z)
 	{
 		AlphaModel m = modelCache.poll();
 		if (m == null)
@@ -451,7 +452,7 @@ class Zone
 		alphaModels.add(m);
 	}
 
-	void removeTemp()
+	public void removeTemp()
 	{
 		for (int i = alphaModels.size() - 1; i >= 0; --i)
 		{
@@ -482,12 +483,12 @@ class Zone
 	private static final int[] numOfPriority = FacePrioritySorter.numOfPriority;
 	private static final int[][] orderedFaces = FacePrioritySorter.orderedFaces;
 
-	static void initBuffer()
+	public static void initBuffer()
 	{
 		elementBufferId = glGenBuffers();
 	}
 
-	static void freeBuffer()
+	public static void freeBuffer()
 	{
 		glDeleteBuffers(elementBufferId);
 		elementBufferId = 0;
@@ -516,7 +517,7 @@ class Zone
 
 	private static final AlphaModelComparator alphaModelComparator = new AlphaModelComparator();
 
-	void alphaSort(int zx, int zz, int cx, int cy, int cz)
+	public void alphaSort(int zx, int zz, int cx, int cy, int cz)
 	{
 		alphaModelComparator.zx = zx;
 		alphaModelComparator.zz = zz;
@@ -527,7 +528,7 @@ class Zone
 		alphaModels.sort(alphaModelComparator);
 	}
 
-	void renderAlpha(int zx, int zz, int cyaw, int cpitch, int minLevel, int currentLevel, int maxLevel, int level, Set<Integer> hiddenRoofIds, boolean useStaticUnsorted)
+	public void renderAlpha(int zx, int zz, int cyaw, int cpitch, int minLevel, int currentLevel, int maxLevel, int level, Set<Integer> hiddenRoofIds, boolean useStaticUnsorted)
 	{
 		drawOff.clear();
 		drawEnd.clear();
@@ -698,7 +699,7 @@ class Zone
 		}
 	}
 
-	void multizoneLocs(Scene scene, int zx, int zz, int cx, int cz, Zone[][] zones)
+	public void multizoneLocs(Scene scene, int zx, int zz, int cx, int cz, Zone[][] zones)
 	{
 		int offset = scene.getWorldViewId() == -1 ? GpuPlugin.SCENE_OFFSET >> 3 : 0;
 		for (int i = 0; i < alphaModels.size(); ++i) // NOPMD: ForLoopCanBeForeach

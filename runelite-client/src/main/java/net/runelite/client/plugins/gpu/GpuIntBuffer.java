@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 
-class GpuIntBuffer
+public class GpuIntBuffer
 {
 	private final IntBuffer buffer;
 
@@ -60,12 +60,12 @@ class GpuIntBuffer
 		buffer.clear();
 	}
 
-	IntBuffer getBuffer()
+	public IntBuffer getBuffer()
 	{
 		return buffer;
 	}
 
-	static IntBuffer allocateDirect(int size)
+	public static IntBuffer allocateDirect(int size)
 	{
 		return ByteBuffer.allocateDirect(size * Integer.BYTES)
 			.order(ByteOrder.nativeOrder())

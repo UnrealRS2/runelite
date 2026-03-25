@@ -30,7 +30,7 @@ import net.runelite.api.Model;
 import net.runelite.api.Perspective;
 import net.runelite.api.Projection;
 
-class FacePrioritySorter
+public class FacePrioritySorter
 {
 	static final int[] distances;
 	static final char[] zsortHead, zsortTail, zsortNext;
@@ -81,12 +81,12 @@ class FacePrioritySorter
 
 	private final SceneUploader sceneUploader;
 
-	FacePrioritySorter(SceneUploader sceneUploader)
+	public FacePrioritySorter(SceneUploader sceneUploader)
 	{
 		this.sceneUploader = sceneUploader;
 	}
 
-	int uploadSortedModel(Projection proj, Model model, int orientation, int x, int y, int z, IntBuffer opaqueBuffer, IntBuffer alphaBuffer)
+	public int uploadSortedModel(Projection proj, Model model, int orientation, int x, int y, int z, IntBuffer opaqueBuffer, IntBuffer alphaBuffer)
 	{
 		final int vertexCount = model.getVerticesCount();
 		final float[] verticesX = model.getVerticesX();

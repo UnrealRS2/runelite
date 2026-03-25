@@ -24,13 +24,13 @@
  */
 package net.runelite.client.plugins.gpu;
 
-class GLBuffer
+public class GLBuffer
 {
 	String name;
-	int glBufferId = -1;
-	int size = -1;
+	public int glBufferId = -1;
+	public int size = -1;
 
-	GLBuffer(String name)
+	public GLBuffer(String name)
 	{
 		this.name = name;
 	}
