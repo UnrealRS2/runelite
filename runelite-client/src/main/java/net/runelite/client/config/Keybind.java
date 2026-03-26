@@ -115,7 +115,7 @@ public class Keybind
 			return false;
 		}
 
-		int keyCode = e.getExtendedKeyCode();
+		int keyCode = e.getExtendedKeyCode() != KeyEvent.VK_UNDEFINED ? e.getExtendedKeyCode() : e.getKeyCode();
 		int modifiers = e.getModifiersEx() & KEYBOARD_MODIFIER_MASK;
 
 		Integer mf = getModifierForKeyCode(keyCode);
