@@ -55,6 +55,14 @@ public class SharedMemoryBridge
 
     public void shutdown()
     {
+        cameraBuf = null;
+        frontBufferInfo = null;
+        resolutionBuffer = null;
+        mouseMoveBuffer = null;
+        mousePressBuffer = null;
+        mouseReleaseBuffer = null;
+        mouseWheelBuffer = null;
+        keyQueueBuffer = null;
         if (nativeHandle != 0)
         {
             closeSharedMemory(nativeHandle);

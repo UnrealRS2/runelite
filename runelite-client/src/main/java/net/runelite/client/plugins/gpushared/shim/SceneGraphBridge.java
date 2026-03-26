@@ -117,6 +117,7 @@ public class SceneGraphBridge
 
 	public void shutdown()
 	{
+		buf = null; // null first so sendZone/sendSceneClear etc. bail out safely
 		if (nativeHandle != 0)
 		{
 			closeSceneMemory(nativeHandle);

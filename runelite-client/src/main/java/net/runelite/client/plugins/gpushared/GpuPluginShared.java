@@ -173,6 +173,7 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
     private int fboScene;
     private boolean sceneFboValid;
     private boolean passthroughMode;
+    private boolean lastPassthroughMode; // tracks transition so GL state can be reset
     private int rboColorBuffer;
     private int rboDepthBuffer;
 
@@ -301,7 +302,7 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
         // Add IDs here for objects that use animated texture IDs but should not animate visually.
         java.util.Set<Integer> suppressIds = new java.util.HashSet<>(java.util.Arrays.asList(
              298,299,300, // Hay objects
-            1276, 1278, 10820 // Trees
+            1276, 1278, 10820, 50935, 57511, 57521, 57522 // Trees
         ));
         clientUploader.suppressAnimObjectIds.addAll(suppressIds);
         mapUploader.suppressAnimObjectIds.addAll(suppressIds);
@@ -515,6 +516,12 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
             client.setUnlockedFps(false);
             client.setExpandedMapLoading(0);
 
+            // Stop zone uploads before bridges are torn down; resizeCanvas() below
+            // may trigger a scene rebuild that would otherwise call sendZone() on
+            // already-unmapped native memory.
+            if (clientUploader != null) clientUploader.setZoneListener(null);
+            if (mapUploader != null)    mapUploader.setZoneListener(null);
+
             if (lwjglInitted)
             {
                 if (textureArrayId != -1)
@@ -530,6 +537,7 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
                 shutdownVao();
                 shutdownBuffers();
                 shutdownFbo();
+                lwjglInitted = false;
             }
 
             if (awtContext != null)
@@ -549,6 +557,7 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
             // force main buffer provider rebuild to turn off alpha channel
             client.resizeCanvas();
         });
+        bridge.shutdown();
         sceneBridge.shutdown();
         entityBridge.shutdown();
         textureBridge.shutdown();
@@ -1310,6 +1319,8 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
             return;
         }
 
+        clientUploader.setCurrentObjectId(tileObject.getId());
+
         // Forward to UE entity batch — covers fires, animated objects, wall/ground decorations
         if (scene.getWorldViewId() == WorldView.TOPLEVEL)
         {
@@ -1351,6 +1362,7 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
                 zone.addTempAlphaModel(a.vao, start, end, plane, x & 1023, y, z & 1023);
             }
         }
+        clientUploader.setCurrentObjectId(0);
     }
 
     @Override
@@ -1366,6 +1378,8 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
         {
             return;
         }
+
+        clientUploader.setCurrentObjectId(gameObject.getId());
 
         Renderable renderable = gameObject.getRenderable();
         int size = m.getFaceCount() * 3 * VAO.VERT_SIZE;
@@ -1408,6 +1422,7 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
             clientUploader.uploadTempModel(m, orient, x, y, z, o.vbo.vb);
             // entity batch already written above
         }
+        clientUploader.setCurrentObjectId(0);
     }
 
     @Override
@@ -1519,7 +1534,7 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
 
     private void prepareInterfaceTexture(int canvasWidth, int canvasHeight)
     {
-        if (canvasWidth != lastCanvasWidth || canvasHeight != lastCanvasHeight)
+        if (!passthroughMode && (canvasWidth != lastCanvasWidth || canvasHeight != lastCanvasHeight))
         {
             lastCanvasWidth = canvasWidth;
             lastCanvasHeight = canvasHeight;
@@ -1710,19 +1725,22 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
             bridge.setFrameBuffer(width, height, true, false, pixels);
         }
 
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, interfacePbo);
-        ByteBuffer interfaceBuf = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-        if (interfaceBuf != null)
+        if (!passthroughMode)
         {
-            interfaceBuf
-                    .asIntBuffer()
-                    .put(pixels, 0, width * height);
-            glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, interfacePbo);
+            ByteBuffer interfaceBuf = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+            if (interfaceBuf != null)
+            {
+                interfaceBuf
+                        .asIntBuffer()
+                        .put(pixels, 0, width * height);
+                glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+            }
+            glBindTexture(GL_TEXTURE_2D, interfaceTexture);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 0);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+            glBindTexture(GL_TEXTURE_2D, 0);
         }
-        glBindTexture(GL_TEXTURE_2D, interfaceTexture);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 0);
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-        glBindTexture(GL_TEXTURE_2D, 0);
     }
 
     SharedMemoryBridge bridge = new SharedMemoryBridge();
@@ -1781,7 +1799,20 @@ public class GpuPluginShared extends Plugin implements DrawCallbacks
         final int canvasHeight = client.getCanvasHeight();
         final int canvasWidth = client.getCanvasWidth();
 
+        // When passthrough turns off, force GL canvas state to rebuild next frame.
+        if (lastPassthroughMode && !passthroughMode)
+        {
+            lastCanvasWidth = lastCanvasHeight = -1;
+        }
+        lastPassthroughMode = passthroughMode;
+
         prepareInterfaceTexture(canvasWidth, canvasHeight);
+
+        // In passthrough UE handles display; skip all GL compositing work.
+        if (passthroughMode)
+        {
+            return;
+        }
 
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);

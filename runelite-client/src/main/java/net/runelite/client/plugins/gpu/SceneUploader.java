@@ -441,6 +441,11 @@ public class SceneUploader
 		z.sizeO += faceCount;
 	}
 
+	public void setCurrentObjectId(int id)
+	{
+		suppressTextureAnim = suppressAnimObjectIds.contains(id);
+	}
+
 	private void uploadZoneRenderable(Renderable r, Zone zone, int orient, int x, int y, int z, int lx, int lz, int ux, int uz, int id, GpuIntBuffer vb, GpuIntBuffer ab)
 	{
 		suppressTextureAnim = suppressAnimObjectIds.contains(id);
